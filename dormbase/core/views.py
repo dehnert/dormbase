@@ -36,60 +36,28 @@ def resident_to_dict(resident):
         'year' : str(resident.year),
     }
 
-def room_to_dict(room):
-    return map(resident_to_dict, Resident.objects.select_related().filter(room__id = room.id))
-
 def directory(request):
     return render_to_response('core/directory.html', context_instance = RequestContext(request))
 
 def directory_json(request):
-    results, resident_results, room_results = [], [], []
-    retrieved_ids = []
-    output = {}
-
+    resident_results = []
+    
     def one_not_empty(d, strings):
         return sum(len(d[s]) for s in strings) > 0
-
-    def add_to_dict(d, results):
-        for r in results:
-            if not r['id'] in d:
-                d[r['id']] = r
-        return d
-
-    # Make queries to User, Resident, and Room tables. Join the results
-    # via python set intersection on the User.id
     
-    if one_not_empty(request.GET, ['firstname', 'lastname', 'username']):
-        results = map(user_to_dict, User.objects.filter(
-            first_name__contains = request.GET['firstname']).filter(
-            last_name__contains = request.GET['lastname']).filter(
-            username__contains = request.GET['username'])[:10])
-        retrieved_ids.append(map(lambda x: x['id'], results))
-        output = add_to_dict(output, results)
-
-    if one_not_empty(request.GET, ['title', 'year']):
-        resident_results = map(resident_to_dict, Resident.objects.filter(
-            title__contains = request.GET['title']).filter(
-            year__contains = request.GET['year'])[:10])
-        retrieved_ids.append(map(lambda x: x['id'], resident_results))
-        output = add_to_dict(output, resident_results)
+    if one_not_empty(request.GET, ['title', 'year', 'room', 'firstname', 'lastname', 'username']):
+        resident_results = map(resident_to_dict, Resident.objects
+                               .select_related()
+                               .distinct()
+                               .filter(title__icontains = request.GET['title'])
+                               .filter(year__contains = request.GET['year'])
+                               .filter(room__number__startswith = request.GET['room'])
+                               .filter(user__first_name__icontains = request.GET['firstname'])
+                               .filter(user__last_name__icontains = request.GET['lastname'])
+                               .filter(user__username__icontains = request.GET['username'])
+                               .order_by('user__username'))
         
-    if one_not_empty(request.GET, ['room']):
-        room_results = map(room_to_dict, Room.objects.filter(
-            number__startswith = request.GET['room'])[:10])
-        # necessary because room_results goes through map() twice
-        if len(room_results) > 0: room_results = room_results[0]
-        retrieved_ids.append(map(lambda x: x['id'], room_results))
-        output = add_to_dict(output, room_results)
-
-    s = set([])
-    if len(retrieved_ids) > 0:
-        s = set(retrieved_ids[0])
-        if len(retrieved_ids) > 1:
-            for idset in retrieved_ids[1:]:
-                s = s.intersection(set(idset))
-
-    jsons = json.dumps({'result' : [output[id] for id in s]})
+    jsons = json.dumps({'result' : resident_results})
     return HttpResponse(jsons, mimetype='application/json')
 
 def populate_directory(request):

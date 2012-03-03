@@ -2,6 +2,21 @@
 {% block activeDirectory %}class="active"{% endblock %}
 {% block content %}
 
+<style type="text/css">
+table.table thead .sorting,
+table.table thead .sorting_asc,
+table.table thead .sorting_desc,
+table.table thead .sorting_asc_disabled,
+table.table thead .sorting_desc_disabled {
+    cursor: pointer;
+    *cursor: hand;
+}
+ 
+table.table thead .sorting { background: url('{{ STATIC_URL }}img/sort_both.png') no-repeat center right; }
+/* table.table thead .sorting_asc { background: url('{{ STATIC_URL }}img/sort_asc.png') no-repeat center right; } */
+/* table.table thead .sorting_desc { background: url('{{ STATIC_URL }}img/sort_desc.png') no-repeat center right; } */
+</style>
+
 <div class="row">     
 <div class="span4">
 <form id="searchform" class="form-horizontal">
@@ -66,9 +81,9 @@
 
 <div class="span8">
 <legend style="margin-bottom: 15px">Results</legend>
-<table class="table table-bordered table-striped">
+<table class="table table-bordered table-striped tablesorter" id="searchResults">
 <thead>
-<tr><th>Username</th><th>First Name</th><th>Last Name</th><th>Room</th><th>Year</th></tr>
+<tr><th class="sorting">Username</th><th class="sorting">First Name</th><th class="sorting">Last Name</th><th class="sorting">Room</th><th class="sorting">Year</th></tr>
 </thead>
 <tbody id="results" name="results"></tbody>
 </table>
@@ -96,6 +111,8 @@ function search() {
 	for (var index in search_json.result) {
             $("#results").append(userToHTML(search_json.result[index]));
 	}
+	// sort on second and third columns in ascending order 
+	// $("#searchResults").tablesorter( {sortList: [[1,0], [2,0]]} ); 
     });
 }
 
@@ -108,4 +125,6 @@ $("#year").keyup(function() { search(); });
 </script>
 
 {% endblock %}
-
+{% block extraScripts %}
+<script type="text/javascript" src="{{ STATIC_URL }}js/jquery.tablesorter.min.js"></script> 
+{% endblock %}
